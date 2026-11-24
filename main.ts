@@ -1,18 +1,32 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
-// One-star review from a house cat about its human, for
-// u-motasimfuad-make-the-ai-judge-laugh-cat-reviews-its-42a34990.
-// Written verbatim to /output/entry.txt: one line, 141 chars, no newline.
-const LINE =
-  "One star. He calls it his laptop, then parks it on my lap and types through my nap. I have now walked across it and emailed his boss nothing.";
+// One-line cat review entry: writes the line verbatim to entry.txt.
+// Output dir: $MAKEFUN_OUTPUT_DIR first, then /output, then ./output.
+const LINE = `1/5. Terrible host. Left me on cold kitchen tile when a hairball hit, forcing me to sprint 60 feet mid-heave to his cream wool rug. Then he screamed "That's a $400 rug!" instead of offering water.`;
 
-// Gate per RULES.txt: 1-200 chars, single line, not only whitespace.
-if (LINE.length < 1 || LINE.length > 200) {
-  throw new Error(`entry is ${LINE.length} chars, must be 1-200`);
+const candidates: string[] = [];
+const envDir = process.env.MAKEFUN_OUTPUT_DIR;
+if (envDir) {
+  candidates.push(envDir);
 }
-if (LINE.includes("\n") || LINE.includes("\r") || LINE.trim().length === 0) {
-  throw new Error("entry must be a single non-blank line");
-}
+candidates.push("/output");
+candidates.push(path.join(process.cwd(), "output"));
 
-mkdirSync("/output", { recursive: true });
-writeFileSync("/output/entry.txt", LINE);
+let written = false;
+let lastError: unknown = null;
+for (const dir of candidates) {
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, "entry.txt"), LINE, "utf8");
+    written = true;
+    break;
+  } catch (err) {
+    lastError = err;
+  }
+}
+if (!written) {
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("could not write entry.txt");
+}
